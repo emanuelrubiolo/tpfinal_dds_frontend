@@ -1,6 +1,6 @@
-import { useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { CustomerContext } from '../context/CustomerContext';
+import { useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { CustomerContext } from "../context/CustomerContext";
 import {
   TextField,
   List,
@@ -14,49 +14,48 @@ import {
   Card,
   CardContent,
   Alert,
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { useNavigate } from 'react-router-dom';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import API_BASE_URL from '../config';
-
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { useNavigate } from "react-router-dom";
+import SearchIcon from "@mui/icons-material/Search";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import API_BASE_URL from "../config";
 
 const DarkBackgroundContainer = styled(Box)({
-  minHeight: '100vh',
-  backgroundColor: '#121212',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '20px',
+  minHeight: "100vh",
+  backgroundColor: "#121212",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: "20px",
 });
 
 const DarkCard = styled(Card)({
-  backgroundColor: '#1b1e28',
-  color: '#e0e0e3',
-  padding: '30px',
-  borderRadius: '24px',
-  boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.6)',
+  backgroundColor: "#1b1e28",
+  color: "#e0e0e3",
+  padding: "30px",
+  borderRadius: "24px",
+  boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.6)",
 });
 
 const CustomTextField = styled(TextField)({
-  '& label': {
-    color: '#9e9e9e',
+  "& label": {
+    color: "#9e9e9e",
   },
-  '& .MuiInputBase-input': {
-    color: '#e0e0e3',
+  "& .MuiInputBase-input": {
+    color: "#e0e0e3",
   },
-  '& .MuiOutlinedInput-root': {
-    '& fieldset': {
-      borderColor: '#575a6a',
-      borderRadius: '16px',
+  "& .MuiOutlinedInput-root": {
+    "& fieldset": {
+      borderColor: "#575a6a",
+      borderRadius: "16px",
     },
-    '&:hover fieldset': {
-      borderColor: '#ff4081',
+    "&:hover fieldset": {
+      borderColor: "#ff4081",
     },
-    '&.Mui-focused fieldset': {
-      borderColor: '#ff79b0',
+    "&.Mui-focused fieldset": {
+      borderColor: "#ff79b0",
     },
   },
 });
@@ -64,7 +63,7 @@ const CustomTextField = styled(TextField)({
 const SearchCustomer = () => {
   const { selectCustomer } = useContext(CustomerContext);
   const [customers, setCustomers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -77,8 +76,8 @@ const SearchCustomer = () => {
         setFilteredCustomers(response.data);
       })
       .catch((error) => {
-        console.error('Error al obtener los clientes:', error);
-        setError('Error al obtener los clientes');
+        console.error("Error al obtener los clientes:", error);
+        setError("Error al obtener los clientes");
       });
   }, []);
 
@@ -87,7 +86,9 @@ const SearchCustomer = () => {
       (customer) =>
         customer.name.toLowerCase().startsWith(searchTerm.toLowerCase()) ||
         (customer.lastName &&
-          customer.lastName.toLowerCase().startsWith(searchTerm.toLowerCase())) ||
+          customer.lastName
+            .toLowerCase()
+            .startsWith(searchTerm.toLowerCase())) ||
         customer.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredCustomers(results);
@@ -102,12 +103,14 @@ const SearchCustomer = () => {
     event.stopPropagation();
     try {
       await axios.delete(`${API_BASE_URL}/customers/${customerId}`);
-      setFilteredCustomers(filteredCustomers.filter((customer) => customer.id !== customerId));
+      setFilteredCustomers(
+        filteredCustomers.filter((customer) => customer.id !== customerId)
+      );
       setCustomers(customers.filter((customer) => customer.id !== customerId));
-      alert('Cliente eliminado con éxito');
+      alert("Cliente eliminado con éxito");
     } catch (error) {
-      console.error('Error al eliminar el cliente:', error);
-      setError('Hubo un error al eliminar el cliente');
+      console.error("Error al eliminar el cliente:", error);
+      setError("Hubo un error al eliminar el cliente");
     }
   };
 
@@ -123,11 +126,19 @@ const SearchCustomer = () => {
         <Typography
           variant="h4"
           gutterBottom
-          sx={{ fontFamily: 'Montserrat', fontWeight: 'bold', color: '#e0e0e3' }}
+          sx={{
+            fontFamily: "Montserrat",
+            fontWeight: "bold",
+            color: "#e0e0e3",
+          }}
         >
           Buscar Cliente
         </Typography>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <DarkCard>
           <CardContent>
             <Box display="flex" alignItems="center" mb={3}>
@@ -137,7 +148,7 @@ const SearchCustomer = () => {
                 fullWidth
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -167,16 +178,18 @@ const SearchCustomer = () => {
                       <IconButton
                         edge="end"
                         color="error"
-                        onClick={(event) => handleDeleteCustomer(event, customer.id)}
+                        onClick={(event) =>
+                          handleDeleteCustomer(event, customer.id)
+                        }
                       >
                         <DeleteIcon />
                       </IconButton>
                     </Box>
                   }
                   sx={{
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 64, 129, 0.1)',
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 64, 129, 0.1)",
                     },
                   }}
                   onClick={() => handleSelectCustomer(customer)}
@@ -184,7 +197,7 @@ const SearchCustomer = () => {
                   <ListItemText
                     primary={`${customer.name} ${customer.lastName}`}
                     secondary={customer.phone}
-                    sx={{ color: '#e0e0e3' }}
+                    sx={{ color: "#e0e0e3" }}
                   />
                 </ListItem>
               ))}

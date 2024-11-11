@@ -4,7 +4,6 @@ import axios from "axios";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers";
-import { InputAdornment } from "@mui/material";
 
 import {
   Container,
@@ -22,12 +21,34 @@ import {
   FormControl,
   Alert,
   IconButton,
+  InputAdornment,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { styled } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
+import { styled } from "@mui/material/styles";
 import API_BASE_URL from "../config";
-import "@fontsource/montserrat";
+const CustomTextField = styled(TextField)({
+  "& label": {
+    color: "#9e9e9e",
+    fontFamily: "Montserrat",
+  },
+  "& .MuiInputBase-input": {
+    color: "#e0e0e3",
+    fontFamily: "Montserrat",
+  },
+  "& .MuiOutlinedInput-root": {
+    "& fieldset": {
+      borderColor: "#575a6a",
+      borderRadius: "16px",
+    },
+    "&:hover fieldset": {
+      borderColor: "#ff4081",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: "#ff79b0",
+    },
+  },
+});
 
 const LightSelect = styled(Select)({
   "& .MuiSelect-select": {
@@ -59,72 +80,56 @@ const DarkContainer = styled(Container)({
   borderRadius: "32px",
   boxShadow: "0px 8px 30px rgba(0, 0, 0, 0.4)",
   color: "#fff",
-  fontFamily: "Montserrat",
 });
 
 const AccentButton = styled(Button)({
   backgroundColor: "#ff4081",
   color: "#fff",
   padding: "12px 24px",
-  fontSize: "1rem",
   fontWeight: "bold",
   borderRadius: "50px",
-  fontFamily: "Montserrat",
-  boxShadow: "0px 4px 15px rgba(255, 64, 129, 0.4)",
   "&:hover": {
     backgroundColor: "#ff79b0",
-    boxShadow: "0px 6px 20px rgba(255, 64, 129, 0.6)",
   },
 });
 
-const CustomTextField = styled(TextField)({
-  "& label": {
-    color: "#9e9e9e",
-    fontFamily: "Montserrat",
-  },
-  "& .MuiInputBase-input": {
-    color: "#e0e0e3",
-    fontFamily: "Montserrat",
-  },
-  "& .MuiOutlinedInput-root": {
-    "& fieldset": {
-      borderColor: "#575a6a",
-      borderRadius: "16px",
-    },
-    "&:hover fieldset": {
-      borderColor: "#ff4081",
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: "#ff79b0",
-    },
-  },
-});
-
-const NewSale = () => {
-  const { customerId } = useParams();
+const EditSale = () => {
+  const { saleId } = useParams();
   const navigate = useNavigate();
+  const [productList, setProductList] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [productList, setProductList] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [totalAmount, setTotalAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [totalAmount, setTotalAmount] = useState(0);
   const [saleDate, setSaleDate] = useState(null);
   const [error, setError] = useState(null);
-  const [customer, setCustomer] = useState(null);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [deletedProducts, setDeletedProducts] = useState([]);
 
   useEffect(() => {
     axios
-      .get(`${API_BASE_URL}/products`)
-      .then((response) => setProducts(response.data))
-      .catch(() => setError("Error al obtener los productos"));
+      .get(`${API_BASE_URL}/sales/${saleId}`)
+      .then((response) => {
+        const sale = response.data;
+        setTotalAmount(sale.amount);
+        setSaleDate(new Date(sale.date));
+        setPaymentMethod(sale.methodOfPayment);
+
+        return axios.get(`${API_BASE_URL}/sales/${saleId}/products`);
+      })
+      .then((response) =>
+        setProductList(
+          response.data.map((product) => ({ ...product, isNew: false }))
+        )
+      )
+      .catch(() => setError("Error al obtener los productos de la venta"));
 
     axios
-      .get(`${API_BASE_URL}/customers/${customerId}`)
-      .then((response) => setCustomer(response.data))
-      .catch(() => setError("Error al obtener los datos del cliente"));
-  }, [customerId]);
+      .get(`${API_BASE_URL}/products`)
+      .then((response) => setProducts(response.data))
+      .catch(() => setError("Error al obtener la lista de productos"));
+  }, [saleId]);
 
   const addProduct = () => {
     if (quantity <= 0) {
@@ -143,103 +148,119 @@ const NewSale = () => {
 
       if (existingProductIndex !== -1) {
         const updatedList = [...productList];
-        updatedList[existingProductIndex].quantity += parseInt(quantity);
+        updatedList[existingProductIndex].sale_items.amount += parseInt(
+          quantity,
+          10
+        );
         setProductList(updatedList);
       } else if (editingIndex !== null) {
         const updatedList = [...productList];
         updatedList[editingIndex] = {
           ...updatedList[editingIndex],
-          quantity: parseInt(quantity),
+          sale_items: { amount: parseInt(quantity, 10) },
         };
         setProductList(updatedList);
       } else {
         setProductList([
           ...productList,
-          { ...productDetails, quantity: parseInt(quantity) },
+          {
+            ...productDetails,
+            sale_items: { amount: parseInt(quantity, 10) },
+            isNew: true,
+          },
         ]);
       }
 
       setSelectedProduct("");
       setQuantity(1);
       setEditingIndex(null);
+    } else {
+      setError("Seleccione un producto y cantidad válida");
     }
-  };
-
-  const deleteProduct = (index) => {
-    const updatedList = [...productList];
-    updatedList.splice(index, 1);
-    setProductList(updatedList);
   };
 
   const editProductQuantity = (index) => {
     setSelectedProduct(productList[index].id);
-    setQuantity(productList[index].quantity);
+    setQuantity(productList[index].sale_items.amount);
     setEditingIndex(index);
   };
 
-  const finalizeSale = async () => {
-    if (totalAmount < 0) {
-      setError("El monto total no puede ser negativo");
-      return;
-    }
+  const updateProduct = () => {
+    const updatedList = [...productList];
+    updatedList[editingIndex].sale_items.amount = parseInt(quantity, 10);
+    setProductList(updatedList);
+    setEditingIndex(null);
+    setQuantity("");
+    setSelectedProduct("");
+  };
 
+  const deleteProduct = (index) => {
+    const updatedList = [...productList];
+    const deletedProduct = updatedList.splice(index, 1)[0];
+    if (!deletedProduct.isNew) {
+      setDeletedProducts([...deletedProducts, deletedProduct]);
+    }
+    setProductList(updatedList);
+  };
+
+  const saveSale = async () => {
     try {
       const saleData = {
+        id: saleId ? Number(saleId) : undefined,
         amount: parseFloat(totalAmount),
+        date: saleDate ? saleDate.toISOString() : null,
         methodOfPayment: paymentMethod,
-        date: saleDate,
-        customerId: parseInt(customerId),
       };
+      await axios.put(`${API_BASE_URL}/sales/${saleId}`, saleData);
 
-      let saleResponse;
+      const productPromises = productList.map((item) => {
+        if (item.isNew) {
+          return axios.post(`${API_BASE_URL}/sales/${saleId}/products`, {
+            saleId: saleId ? Number(saleId) : undefined,
+            productId: item.id ? Number(item.id) : undefined,
+            amount: item.sale_items.amount,
+          });
+        } else {
+          return axios.put(`${API_BASE_URL}/sales/${saleId}/items/${item.id}`, {
+            saleId: saleId ? Number(saleId) : undefined,
+            productId: item.id ? Number(item.id) : undefined,
+            amount: item.sale_items.amount,
+          });
+        }
+      });
 
-      saleResponse = await axios.post(`${API_BASE_URL}/sales`, saleData);
-
-      const id = saleResponse.data.id;
-
-      const productPromises = productList.map((item) =>
-        axios.post(`${API_BASE_URL}/sales/${id}/products`, {
-          productId: item.id,
-          amount: item.quantity,
+      const deletePromises = deletedProducts.map((item) =>
+        axios.delete(`${API_BASE_URL}/sales/${saleId}/items/${item.id}`, {
+          data: {
+            saleId: saleId ? Number(saleId) : undefined,
+            productId: item.id ? Number(item.id) : undefined,
+          },
         })
       );
 
-      await Promise.all(productPromises);
+      await Promise.all([...productPromises, ...deletePromises]);
 
-      alert("Venta finalizada con éxito");
-      navigate(`/customers/${customerId}`);
+      alert("Venta actualizada con éxito");
+      navigate(`/`);
     } catch (error) {
-      setError("Hubo un error al finalizar la venta");
-      console.error("Error al finalizar la venta:", error);
+      setError("Error al actualizar la venta");
+      console.error("Error:", error);
     }
   };
 
   return (
     <DarkPageContainer>
       <DarkContainer maxWidth="sm">
-        <Typography
-          variant="h4"
-          gutterBottom
-          sx={{ fontFamily: "Montserrat", fontWeight: "bold" }}
-        >
-          Registrar Venta
+        <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
+          Editar Venta
         </Typography>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        {customer && (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6">Datos del Cliente:</Typography>
-            <Typography>Nombre: {customer.name}</Typography>
-            <Typography>Apellido: {customer.lastName}</Typography>
-            <Typography>Teléfono: {customer.phone}</Typography>
-          </Box>
-        )}
-
-        <Box component="form" noValidate autoComplete="off">
+        <Box sx={{ mb: 3 }}>
           <FormControl fullWidth margin="normal">
             <InputLabel sx={{ color: "#9e9e9e", fontFamily: "Montserrat" }}>
               Producto
@@ -248,6 +269,7 @@ const NewSale = () => {
               value={selectedProduct}
               onChange={(e) => setSelectedProduct(e.target.value)}
               label="Producto"
+              disabled={editingIndex !== null}
             >
               <MenuItem value="">
                 <em>Seleccione un producto</em>
@@ -263,23 +285,27 @@ const NewSale = () => {
           <CustomTextField
             label="Cantidad"
             type="number"
+            inputProps={{ min: 1 }}
             fullWidth
-            margin="normal"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            slotProps={{
-              htmlInput: {
-                min: 1,
-              },
-            }}
+            onChange={(e) => setQuantity(parseInt(e.target.value, 10))}
+            sx={{ mt: 2 }}
           />
-
-          <AccentButton onClick={addProduct} fullWidth sx={{ mt: 2 }}>
-            {editingIndex !== null ? "Actualizar Producto" : "Agregar Producto"}
-          </AccentButton>
         </Box>
 
-        <Typography variant="h5" sx={{ mt: 4 }}>
+        <Box sx={{ mb: 3 }}>
+          {editingIndex === null ? (
+            <AccentButton onClick={addProduct} fullWidth>
+              Agregar Producto
+            </AccentButton>
+          ) : (
+            <AccentButton onClick={updateProduct} fullWidth>
+              Actualizar Cantidad
+            </AccentButton>
+          )}
+        </Box>
+
+        <Typography variant="h5" sx={{ mt: 4, mb: 2 }}>
           Lista de Productos
         </Typography>
         <List>
@@ -301,7 +327,7 @@ const NewSale = () => {
                 }
               >
                 <ListItemText
-                  primary={`${item.name} - Cantidad: ${item.quantity}`}
+                  primary={`${item.name} - Cantidad: ${item.sale_items.amount}`}
                 />
               </ListItem>
               <Divider />
@@ -344,14 +370,12 @@ const NewSale = () => {
           />
         </LocalizationProvider>
 
-        {productList.length > 0 && (
-          <AccentButton onClick={finalizeSale} fullWidth sx={{ mt: 3 }}>
-            Finalizar Venta
-          </AccentButton>
-        )}
+        <AccentButton onClick={saveSale} fullWidth sx={{ mt: 3 }}>
+          Guardar Cambios
+        </AccentButton>
       </DarkContainer>
     </DarkPageContainer>
   );
 };
 
-export default NewSale;
+export default EditSale;

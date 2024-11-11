@@ -1,13 +1,11 @@
-import React from 'react';
- 
-import SearchCustomer from '../components/SearchCustomer';
+import React from "react";
 
-const Home = () => { 
+import SearchCustomer from "../components/SearchCustomer";
+
+const Home = () => {
   return (
     <div>
-      
       <SearchCustomer />
-      
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { createContext, useState } from 'react';
+import { createContext, useState } from "react";
 
 export const CustomerContext = createContext();
 
@@ -11,9 +11,11 @@ export const CustomerProvider = ({ children }) => {
   };
 
   const updateCustomer = (updatedCustomer) => {
-    setCustomers(customers.map(customer => 
-      customer.id === updatedCustomer.id ? updatedCustomer : customer
-    ));
+    setCustomers(
+      customers.map((customer) =>
+        customer.id === updatedCustomer.id ? updatedCustomer : customer
+      )
+    );
   };
 
   const selectCustomer = (customer) => {
@@ -21,7 +23,16 @@ export const CustomerProvider = ({ children }) => {
   };
 
   return (
-    <CustomerContext.Provider value={{ customers, setCustomers, addCustomer, updateCustomer, selectedCustomer, selectCustomer }}>
+    <CustomerContext.Provider
+      value={{
+        customers,
+        setCustomers,
+        addCustomer,
+        updateCustomer,
+        selectedCustomer,
+        selectCustomer,
+      }}
+    >
       {children}
     </CustomerContext.Provider>
   );
