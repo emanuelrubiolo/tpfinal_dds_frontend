@@ -1,10 +1,8 @@
-
 import { useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { CustomerContext } from '../context/CustomerContext';
 import {
   TextField,
-  Button,
   List,
   ListItem,
   ListItemText,
@@ -13,18 +11,62 @@ import {
   Container,
   Typography,
   Box,
+  Card,
+  CardContent,
+  Alert,
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import API_BASE_URL from '../config';
 
+
+const DarkBackgroundContainer = styled(Box)({
+  minHeight: '100vh',
+  backgroundColor: '#121212',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: '20px',
+});
+
+const DarkCard = styled(Card)({
+  backgroundColor: '#1b1e28',
+  color: '#e0e0e3',
+  padding: '30px',
+  borderRadius: '24px',
+  boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.6)',
+});
+
+const CustomTextField = styled(TextField)({
+  '& label': {
+    color: '#9e9e9e',
+  },
+  '& .MuiInputBase-input': {
+    color: '#e0e0e3',
+  },
+  '& .MuiOutlinedInput-root': {
+    '& fieldset': {
+      borderColor: '#575a6a',
+      borderRadius: '16px',
+    },
+    '&:hover fieldset': {
+      borderColor: '#ff4081',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#ff79b0',
+    },
+  },
+});
+
 const SearchCustomer = () => {
   const { selectCustomer } = useContext(CustomerContext);
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +78,7 @@ const SearchCustomer = () => {
       })
       .catch((error) => {
         console.error('Error al obtener los clientes:', error);
+        setError('Error al obtener los clientes');
       });
   }, []);
 
@@ -64,7 +107,7 @@ const SearchCustomer = () => {
       alert('Cliente eliminado con éxito');
     } catch (error) {
       console.error('Error al eliminar el cliente:', error);
-      alert('Hubo un error al eliminar el cliente');
+      setError('Hubo un error al eliminar el cliente');
     }
   };
 
@@ -75,70 +118,81 @@ const SearchCustomer = () => {
   };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h5" color="primary" gutterBottom>
-        Buscar Cliente
-      </Typography>
+    <DarkBackgroundContainer>
+      <Container maxWidth="sm">
+        <Typography
+          variant="h4"
+          gutterBottom
+          sx={{ fontFamily: 'Montserrat', fontWeight: 'bold', color: '#e0e0e3' }}
+        >
+          Buscar Cliente
+        </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <DarkCard>
+          <CardContent>
+            <Box display="flex" alignItems="center" mb={3}>
+              <CustomTextField
+                label="Buscar cliente"
+                variant="outlined"
+                fullWidth
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={handleSearch} color="primary">
+                        <SearchIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
 
-      <Box display="flex" alignItems="center" mb={3}>
-        <TextField
-          label="Buscar cliente"
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={handleSearch} color="primary">
-                  <SearchIcon />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-
-      <List>
-        {filteredCustomers.map((customer) => (
-          <ListItem
-            key={customer.id}
-            secondaryAction={
-              <Box>
-                <IconButton
-                  edge="end"
-                  color="primary"
-                  onClick={(event) => handleEditCustomer(event, customer)}
-                  sx={{ mr: 1 }}
+            <List>
+              {filteredCustomers.map((customer) => (
+                <ListItem
+                  key={customer.id}
+                  secondaryAction={
+                    <Box>
+                      <IconButton
+                        edge="end"
+                        color="primary"
+                        onClick={(event) => handleEditCustomer(event, customer)}
+                        sx={{ mr: 1 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        color="error"
+                        onClick={(event) => handleDeleteCustomer(event, customer.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  }
+                  sx={{
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 64, 129, 0.1)',
+                    },
+                  }}
+                  onClick={() => handleSelectCustomer(customer)}
                 >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  edge="end"
-                  color="error"
-                  onClick={(event) => handleDeleteCustomer(event, customer.id)}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
-            }
-            sx={{
-              cursor: 'pointer',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-              },
-            }}
-            onClick={() => handleSelectCustomer(customer)}
-          >
-            <ListItemText
-              primary={`${customer.name} ${customer.lastName}`}
-              secondary={customer.phone}
-            />
-          </ListItem>
-        ))}
-      </List>
-    </Container>
+                  <ListItemText
+                    primary={`${customer.name} ${customer.lastName}`}
+                    secondary={customer.phone}
+                    sx={{ color: '#e0e0e3' }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </CardContent>
+        </DarkCard>
+      </Container>
+    </DarkBackgroundContainer>
   );
 };
 

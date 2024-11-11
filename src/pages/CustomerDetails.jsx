@@ -1,10 +1,69 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { Container, Typography, Box, CircularProgress, Button, Card, CardContent, List, ListItem, ListItemText, Alert } from '@mui/material';
+import { Container, Typography, CircularProgress, Button, Card, CardContent, List, ListItem, Alert, Box } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { CustomerContext } from '../context/CustomerContext';
 import API_BASE_URL from '../config';
+import '@fontsource/montserrat';
+
+
+const DarkPageContainer = styled('div')({
+  minHeight: '100vh',
+  backgroundColor: '#121212',
+  padding: '40px 0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+const DarkContainer = styled(Container)({
+  background: 'linear-gradient(145deg, #1b1e28, #23262f)',
+  padding: '30px',
+  borderRadius: '32px',
+  boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.4)',
+  color: '#fff',
+  fontFamily: 'Montserrat',
+});
+
+const DarkCard = styled(Card)(({ theme }) => ({
+  backgroundColor: '#1b1e28',
+  color: '#e0e0e3',
+  padding: theme.spacing(4),
+  borderRadius: '24px',
+  boxShadow: '0px 6px 24px rgba(0, 0, 0, 0.6)',
+  backdropFilter: 'blur(10px)',
+}));
+
+const AccentButton = styled(Button)({
+  backgroundColor: '#ff4081',
+  color: '#fff',
+  padding: '12px 24px',
+  fontSize: '1rem',
+  fontWeight: 'bold',
+  borderRadius: '50px',
+  fontFamily: 'Montserrat',
+  boxShadow: '0px 4px 15px rgba(255, 64, 129, 0.4)',
+  '&:hover': {
+    backgroundColor: '#ff79b0',
+    boxShadow: '0px 6px 20px rgba(255, 64, 129, 0.6)',
+  },
+});
+
+const DeleteButton = styled(Button)({
+  backgroundColor: '#f44336',
+  color: '#fff',
+  padding: '8px 16px',
+  fontSize: '0.875rem',
+  fontWeight: 'bold',
+  borderRadius: '50px',
+  fontFamily: 'Montserrat',
+  boxShadow: '0px 4px 15px rgba(244, 67, 54, 0.4)',
+  '&:hover': {
+    backgroundColor: '#d32f2f',
+    boxShadow: '0px 6px 20px rgba(244, 67, 54, 0.6)',
+  },
+});
 
 const CustomerDetails = () => {
   const { id } = useParams();
@@ -13,7 +72,9 @@ const CustomerDetails = () => {
   const [sales, setSales] = useState([]);
   const [loadingCustomer, setLoadingCustomer] = useState(true);
   const [loadingSales, setLoadingSales] = useState(true);
+  const [loadingLocations, setLoadingLocations] = useState(true);
   const [error, setError] = useState(null);
+  const [locations, setLocations] = useState([]);
   const [hasFetchedCustomer, setHasFetchedCustomer] = useState(false);
   const [hasFetchedSales, setHasFetchedSales] = useState(false);
 
@@ -35,96 +96,194 @@ const CustomerDetails = () => {
         setLoadingCustomer(false);
       }
     };
+
     fetchCustomer();
   }, [id, hasFetchedCustomer, selectedCustomer, selectCustomer]);
 
-
   useEffect(() => {
-    const fetchSales = async () => {
-      if (!hasFetchedSales) {
-        try {
-          setLoadingSales(true);
-          const salesResponse = await axios.get(`${API_BASE_URL}/customers/${id}/sales`);
-          setSales(salesResponse.data);
-          setHasFetchedSales(true);
-        } catch (err) {
-          setError('Error al obtener las ventas del cliente');
-          console.error(err);
-        } finally {
-          setLoadingSales(false);
-        }
-      } else {
+    const fetchSalesData = async () => {
+      try {
+        setLoadingSales(true);
+        const salesResponse = await axios.get(`${API_BASE_URL}/customers/${id}/sales`);
+        const salesWithDetails = await Promise.all(
+          salesResponse.data.map(async (sale) => {
+            const productsResponse = await axios.get(`${API_BASE_URL}/sales/${sale.id}/products`);
+            const saleDataResponse = await axios.get(`${API_BASE_URL}/sales`);
+
+            const saleAmount = saleDataResponse.data.find((s) => s.id === sale.id)?.amount || 0;
+
+            return {
+              id: sale.id,
+              date: sale.date,
+              totalAmount: saleAmount,
+              products: productsResponse.data.map((product) => ({
+                id: product.id,
+                name: product.name,
+                amount: product.sale_items.amount,
+              })),
+            };
+          })
+        );
+        setSales(salesWithDetails);
+        setHasFetchedSales(true);
+      } catch (err) {
+        setError('Error al obtener los datos de las ventas');
+        console.error(err);
+      } finally {
         setLoadingSales(false);
       }
     };
-    fetchSales();
+
+    fetchSalesData();
   }, [id, hasFetchedSales]);
 
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        setLoadingLocations(true);
+        const locationsResponse = await axios.get(`${API_BASE_URL}/locations`);
+        setLocations(locationsResponse.data);
+      } catch (err) {
+        setError('Error al obtener las ubicaciones');
+        console.error(err);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   const handleAddSale = () => {
     navigate(`/customers/${id}/new-sale`);
   };
 
-  if (loadingCustomer || loadingSales) return <CircularProgress color="primary" />;
+  const handleDeleteSale = async (saleId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/sales/${saleId}`);
+      setSales((prevSales) => prevSales.filter((sale) => sale.id !== saleId));
+    } catch (err) {
+      setError('Error al eliminar la venta');
+      console.error(err);
+    }
+  };
+
+  const getLocationName = (locationId) => {
+    const location = locations.find((loc) => loc.id === locationId);
+    return location ? `${location.city}, ${location.province}` : 'No disponible';
+  };
+
+  if (loadingCustomer || loadingSales || loadingLocations) return <CircularProgress color="primary" />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" color="primary" gutterBottom>
-        Detalles del Cliente
-      </Typography>
-      {selectedCustomer ? (
-        <Card sx={{ mb: 4, backgroundColor: '#f0f4f8' }}>
-          <CardContent>
-            <Typography variant="h5" color="secondary">
-              {selectedCustomer.name} {selectedCustomer.lastName}
-            </Typography>
-            {selectedCustomer.phone && (
-              <Typography variant="body1">
-                <strong>Teléfono:</strong> {selectedCustomer.phone}
+    <DarkPageContainer>
+      <DarkContainer maxWidth="md">
+        <Typography variant="h4" color="primary" gutterBottom sx={{ fontFamily: 'Montserrat', fontWeight: 'bold' }}>
+          Detalles del Cliente
+        </Typography>
+        {selectedCustomer ? (
+          <DarkCard sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h5">
+                {selectedCustomer.name} {selectedCustomer.lastName}
               </Typography>
-            )}
-            {selectedCustomer.comment && (
+              {selectedCustomer.phone && (
+                <Typography variant="body1">
+                  <strong>Teléfono:</strong> {selectedCustomer.phone}
+                </Typography>
+              )}
+              {selectedCustomer.comment && (
+                <Typography variant="body1">
+                  <strong>Comentario:</strong> {selectedCustomer.comment}
+                </Typography>
+              )}
               <Typography variant="body1">
-                <strong>Comentario:</strong> {selectedCustomer.comment}
+                <strong>Localidad:</strong> {getLocationName(selectedCustomer.locationId)}
               </Typography>
-            )}
-            <Typography variant="body1">
-              <strong>Dirección:</strong> {selectedCustomer.address || 'No disponible'}
-            </Typography>
-            <Typography variant="body1">
-              <strong>Email:</strong> {selectedCustomer.email || 'No disponible'}
-            </Typography>
-            <Typography variant="body1">
-              <strong>Fecha de registro:</strong> {selectedCustomer.registrationDate ? new Date(selectedCustomer.registrationDate).toLocaleDateString() : 'No disponible'}
-            </Typography>
-            <Button variant="contained" color="primary" onClick={handleAddSale} sx={{ mt: 2 }}>
-              Agregar Venta
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Typography variant="body1">No se encontraron detalles del cliente.</Typography>
-      )}
-      {sales.length === 0 ? (
-        <Typography variant="body1">No se encontraron ventas para este cliente.</Typography>
-      ) : (
-        <List>
-          {sales.map((sale) => (
-            <ListItem key={sale.id} sx={{ backgroundColor: '#e8f0fe', mb: 1, borderRadius: 2 }}>
-              <ListItemText
-                primary={<strong>ID de venta:</strong>}
-                secondary={`${sale.id} - ${new Date(sale.date).toLocaleDateString()}`}
-              />
-              <ListItemText
-                primary={<strong>Total:</strong>}
-                secondary={`$${sale.total}`}
-              />
-            </ListItem>
-          ))}
-        </List>
-      )}
-    </Container>
+              <AccentButton onClick={handleAddSale} sx={{ mt: 2 }}>
+                Agregar Venta
+              </AccentButton>
+            </CardContent>
+          </DarkCard>
+        ) : (
+          <Typography variant="body1">No se encontraron detalles del cliente.</Typography>
+        )}
+        {sales.length === 0 ? (
+          <Typography variant="body1">No se encontraron ventas para este cliente.</Typography>
+        ) : (
+          <List>
+            {sales.map((sale) => (
+              <ListItem
+                key={sale.id}
+                sx={{
+                  backgroundColor: '#333842',
+                  mb: 3,
+                  p: 3,
+                  borderRadius: 3,
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#ff79b0',
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    mb: 1,
+                  }}
+                >
+                  ID de Venta: {sale.id}
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#b0b3c6', mb: 2, fontSize: '1rem' }}>
+                  Fecha: {new Date(sale.date).toLocaleDateString()}
+                </Typography>
+                <Box sx={{ ml: 2, mb: 2, width: '100%' }}>
+                  {sale.products.map((product) => (
+                    <Box
+                      key={product.id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        backgroundColor: '#2b2f39',
+                        p: 2,
+                        borderRadius: 2,
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ color: '#ff9e9e', fontSize: '1rem' }}>
+                        Producto: {product.name}
+                      </Typography>
+                      <Typography variant="body1" sx={{ color: '#b0b3c6', fontSize: '1rem' }}>
+                        Cantidad: {product.amount}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: '#ffd700',
+                    fontSize: '1.2rem',
+                    alignSelf: 'flex-end',
+                  }}
+                >
+                  Total: ${sale.totalAmount}
+                </Typography>
+                <DeleteButton onClick={() => handleDeleteSale(sale.id)} sx={{ mt: 2 }}>
+                  Eliminar Venta
+                </DeleteButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </DarkContainer>
+    </DarkPageContainer>
   );
 };
 

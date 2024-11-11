@@ -8,7 +8,9 @@ import Home from './pages/Home';
 import NewProduct from './pages/NewProduct';
 import NavBar from './components/NavBar'; 
 import NewLocation from './pages/NewLocation';
-
+import './App.css';
+import Locations from './pages/Locations';
+import Products from './pages/Products';
 
 import { ProductProvider } from './context/ProductContext'; 
 import { LocationProvider } from './context/LocationContext';
@@ -23,12 +25,16 @@ function App() {
           <NavBar /> 
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/customers/:id" element={<CustomerDetails />} />
-              <Route path="/customers/:customerId/new-sale" element={<NewSale />} />
               <Route path="/customers/new" element={<NewCustomer />} />
+              <Route path="/customers/:id" element={<CustomerDetails />} />             
               <Route path="/customers/:id/edit" element={<NewCustomer />} />
+              <Route path="/customers/:customerId/new-sale" element={<NewSale />} />
               <Route path="/new-product" element={<NewProduct />} />
               <Route path="/new-location" element={<NewLocation />} />
+              <Route path="/locations/:id/edit" element={<NewLocation />} />
+              <Route path="/locations" element={<Locations />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/products/:id/edit" element={<NewProduct />} />            
             </Routes>
           </div>
         </Router>

@@ -1,14 +1,11 @@
 import React from 'react';
-import { Button } from 'react-bootstrap'; 
-import { useNavigate } from 'react-router-dom'; 
+ 
 import SearchCustomer from '../components/SearchCustomer';
 
-const Home = () => {
-  const navigate = useNavigate(); 
+const Home = () => { 
   return (
     <div>
       
-
       <SearchCustomer />
       
     </div>

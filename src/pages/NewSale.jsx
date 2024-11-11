@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers';
+import { InputAdornment } from '@mui/material';
 import {
   Container,
   Typography,
@@ -16,179 +20,313 @@ import {
   InputLabel,
   FormControl,
   Alert,
+  IconButton,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { styled } from '@mui/material/styles';
+import EditIcon from '@mui/icons-material/Edit';
 import API_BASE_URL from '../config';
+import '@fontsource/montserrat';
+
+const DarkPageContainer = styled('div')({
+  minHeight: '100vh',
+  backgroundColor: '#121212',
+  padding: '40px 0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+const DarkContainer = styled(Container)({
+  background: 'linear-gradient(145deg, #1b1e28, #23262f)',
+  padding: '30px',
+  borderRadius: '32px',
+  boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.4)',
+  color: '#fff',
+  fontFamily: 'Montserrat',
+});
+
+const AccentButton = styled(Button)({
+  backgroundColor: '#ff4081',
+  color: '#fff',
+  padding: '12px 24px',
+  fontSize: '1rem',
+  fontWeight: 'bold',
+  borderRadius: '50px',
+  fontFamily: 'Montserrat',
+  boxShadow: '0px 4px 15px rgba(255, 64, 129, 0.4)',
+  '&:hover': {
+    backgroundColor: '#ff79b0',
+    boxShadow: '0px 6px 20px rgba(255, 64, 129, 0.6)',
+  },
+});
+
+const CustomTextField = styled(TextField)({
+  '& label': {
+    color: '#9e9e9e',
+    fontFamily: 'Montserrat',
+  },
+  '& .MuiInputBase-input': {
+    color: '#e0e0e3',
+    fontFamily: 'Montserrat',
+  },
+  '& .MuiOutlinedInput-root': {
+    '& fieldset': {
+      borderColor: '#575a6a',
+      borderRadius: '16px',
+    },
+    '&:hover fieldset': {
+      borderColor: '#ff4081',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#ff79b0',
+    },
+  },
+});
 
 const NewSale = () => {
-    const { customerId } = useParams();  
-
+  const { customerId, saleId } = useParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [productList, setProductList] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
-  const [saleDate, setSaleDate] = useState('');
+  const [saleDate, setSaleDate] = useState(null);
   const [error, setError] = useState(null);
+  const [customer, setCustomer] = useState(null);
 
   useEffect(() => {
     axios
       .get(`${API_BASE_URL}/products`)
       .then((response) => setProducts(response.data))
       .catch(() => setError('Error al obtener los productos'));
-  }, []);
 
+    axios
+      .get(`${API_BASE_URL}/customers/${customerId}`)
+      .then((response) => setCustomer(response.data))
+      .catch(() => setError('Error al obtener los datos del cliente'));
 
-  useEffect(() => {
-    console.log("Customer ID desde URL:", customerId); 
-    if (!customerId) {
-      setError('No se encontró un ID de cliente en la URL');
+    if (saleId) {
+      axios
+        .get(`${API_BASE_URL}/sales/${saleId}`)
+        .then((response) => {
+          const sale = response.data;
+          setTotalAmount(sale.amount);
+          setPaymentMethod(sale.methodOfPayment);
+          setSaleDate(sale.date);
+          setProductList(sale.products);
+        })
+        .catch(() => setError('Error al obtener los datos de la venta'));
     }
-  }, [customerId]);
+  }, [customerId, saleId]);
 
   const addProduct = () => {
+    if (quantity <= 0) {
+      setError('La cantidad debe ser mayor a cero');
+      return;
+    }
+  
     const productDetails = products.find((product) => product.id === parseInt(selectedProduct));
+  
     if (productDetails) {
-      setProductList([
-        ...productList,
-        { ...productDetails, quantity: parseInt(quantity) },
-      ]);
+      const existingProductIndex = productList.findIndex(
+        (product) => product.id === parseInt(selectedProduct)
+      );
+  
+      if (existingProductIndex !== -1) {
+        const updatedList = [...productList];
+        updatedList[existingProductIndex].quantity += parseInt(quantity);
+        setProductList(updatedList);
+      } else if (editingIndex !== null) {
+        const updatedList = [...productList];
+        updatedList[editingIndex] = { ...updatedList[editingIndex], quantity: parseInt(quantity) };
+        setProductList(updatedList);
+      } else {
+        setProductList([...productList, { ...productDetails, quantity: parseInt(quantity) }]);
+      }
+  
       setSelectedProduct('');
       setQuantity(1);
+      setEditingIndex(null);
     }
+  };
+  
+
+  const deleteProduct = (index) => {
+    const updatedList = [...productList];
+    updatedList.splice(index, 1);
+    setProductList(updatedList);
+  };
+
+  const editProductQuantity = (index) => {
+    setSelectedProduct(productList[index].id);
+    setQuantity(productList[index].quantity);
+    setEditingIndex(index);
   };
 
   const finalizeSale = async () => {
-    try {
-      const calculatedAmount = productList.reduce((acc, item) => acc + item.price * item.quantity, 0);
-      const saleAmount = totalAmount > 0 ? parseFloat(totalAmount) : calculatedAmount;
+    if (totalAmount < 0) {
+      setError('El monto total no puede ser negativo');
+      return;
+    }
 
+    try {
       const saleData = {
-        amount: saleAmount,
+        amount: parseFloat(totalAmount),
         methodOfPayment: paymentMethod,
         date: saleDate,
-        customerId: parseInt(customerId),  
+        customerId: parseInt(customerId),
       };
 
-      console.log("Datos de la venta enviados:", saleData);  
-      const saleResponse = await axios.post(`${API_BASE_URL}/sales`, saleData, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const saleId = saleResponse.data.id;
+      let saleResponse;
+      if (saleId) {
+        saleResponse = await axios.put(`${API_BASE_URL}/sales/${saleId}`, saleData);
+      } else {
+        saleResponse = await axios.post(`${API_BASE_URL}/sales`, saleData);
+      }
+      const id = saleResponse.data.id || saleId;
 
       const productPromises = productList.map((item) =>
         axios.post(
-          `${API_BASE_URL}/sales/${saleId}/products`,
+          `${API_BASE_URL}/sales/${id}/products`,
           { productId: item.id, amount: item.quantity },
-          { headers: { 'Content-Type': 'application/json' } }
         )
       );
 
       await Promise.all(productPromises);
 
       alert('Venta finalizada con éxito');
-      setProductList([]);
-      setTotalAmount(0);
-      setPaymentMethod('');
-      setSaleDate('');
+      navigate(`/customers/${customerId}`);
     } catch (error) {
       setError('Hubo un error al finalizar la venta');
-      console.error("Error al finalizar la venta:", error); 
+      console.error("Error al finalizar la venta:", error);
     }
   };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" color="primary" gutterBottom>
-        Registrar Venta
-      </Typography>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    <DarkPageContainer>
+      <DarkContainer maxWidth="sm">
+        <Typography variant="h4" gutterBottom sx={{ fontFamily: 'Montserrat', fontWeight: 'bold' }}>
+          Registrar Venta
+        </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box component="form" noValidate autoComplete="off">
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Producto</InputLabel>
-          <Select
-            value={selectedProduct}
-            onChange={(e) => setSelectedProduct(e.target.value)}
-            label="Producto"
-          >
-            <MenuItem value="">
-              <em>Seleccione un producto</em>
-            </MenuItem>
-            {products.map((product) => (
-              <MenuItem key={product.id} value={product.id}>
-                {product.name}
+        {customer && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6">Datos del Cliente:</Typography>
+            <Typography>Nombre: {customer.name}</Typography>
+            <Typography>Apellido: {customer.lastName}</Typography>
+            <Typography>Teléfono: {customer.phone}</Typography>
+          </Box>
+        )}
+
+        <Box component="form" noValidate autoComplete="off">
+          <FormControl fullWidth margin="normal">
+            <InputLabel sx={{ color: '#9e9e9e', fontFamily: 'Montserrat' }}>Producto</InputLabel>
+            <Select
+              value={selectedProduct}
+              onChange={(e) => setSelectedProduct(e.target.value)}
+              label="Producto"
+            >
+              <MenuItem value="">
+                <em>Seleccione un producto</em>
               </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+              {products.map((product) => (
+                <MenuItem key={product.id} value={product.id}>
+                  {product.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <TextField
-          label="Cantidad"
-          type="number"
-          inputProps={{ min: 1 }}
+          <CustomTextField
+            label="Cantidad"
+            type="number"
+            inputProps={{ min: 1 }}
+            fullWidth
+            margin="normal"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+
+          <AccentButton onClick={addProduct} fullWidth sx={{ mt: 2 }}>
+            {editingIndex !== null ? 'Actualizar Producto' : 'Agregar Producto'}
+          </AccentButton>
+        </Box>
+
+        <Typography variant="h5" sx={{ mt: 4 }}>
+          Lista de Productos
+        </Typography>
+        <List>
+          {productList.map((item, index) => (
+            <React.Fragment key={index}>
+              <ListItem
+                secondaryAction={
+                  <>
+                    <IconButton edge="end" onClick={() => editProductQuantity(index)}>
+                      <EditIcon sx={{ color: '#ff4081' }} />
+                    </IconButton>
+                    <IconButton edge="end" onClick={() => deleteProduct(index)}>
+                      <DeleteIcon sx={{ color: '#ff4081' }} />
+                    </IconButton>
+                  </>
+                }
+              >
+                <ListItemText
+                  primary={`${item.name} - Cantidad: ${item.quantity}`}
+                />
+              </ListItem>
+              <Divider />
+            </React.Fragment>
+          ))}
+        </List>
+
+        <CustomTextField
+          label="Forma de Pago"
           fullWidth
           margin="normal"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
         />
 
-        <Button variant="contained" color="secondary" onClick={addProduct} sx={{ mt: 2 }}>
-          Agregar Producto
-        </Button>
-      </Box>
+        <CustomTextField
+          label="Monto Total"
+          type="text"
+          fullWidth
+          margin="normal"
+          value={totalAmount}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (/^\d*\.?\d*$/.test(value)) {
+              setTotalAmount(value);
+            }
+          }}
+          slotProps={{
+            textField: {
+              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            },
+          }}
+        />
 
-      <Typography variant="h5" sx={{ mt: 4 }}>
-        Lista de Productos
-      </Typography>
-      <List>
-        {productList.map((item, index) => (
-          <React.Fragment key={index}>
-            <ListItem>
-              <ListItemText
-                primary={`${item.name} - Cantidad: ${item.quantity}`}
-                secondary={`Precio: $${item.price * item.quantity}`}
-              />
-            </ListItem>
-            <Divider />
-          </React.Fragment>
-        ))}
-      </List>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Fecha de Venta"
+            value={saleDate}
+            onChange={(newDate) => setSaleDate(newDate)}
+            renderInput={(params) => <CustomTextField {...params} fullWidth margin="normal" />}
+          />
+        </LocalizationProvider>
 
-      <TextField
-        label="Forma de Pago"
-        fullWidth
-        margin="normal"
-        value={paymentMethod}
-        onChange={(e) => setPaymentMethod(e.target.value)}
-      />
-
-      <TextField
-        label="Monto Total"
-        type="number"
-        fullWidth
-        margin="normal"
-        inputProps={{ min: 0 }}
-        value={totalAmount}
-        onChange={(e) => setTotalAmount(parseFloat(e.target.value))}
-      />
-
-      <TextField
-        label="Fecha de la Venta"
-        type="date"
-        fullWidth
-        margin="normal"
-        value={saleDate}
-        onChange={(e) => setSaleDate(e.target.value)}
-        InputLabelProps={{
-          shrink: true,
-        }}
-      />
-
-      <Button variant="contained" color="primary" onClick={finalizeSale} sx={{ mt: 3 }}>
-        Finalizar Venta
-      </Button>
-    </Container>
+        {productList.length > 0 && (
+  <AccentButton onClick={finalizeSale} fullWidth sx={{ mt: 3 }}>
+    Finalizar Venta
+  </AccentButton>
+)}
+      </DarkContainer>
+    </DarkPageContainer>
   );
 };
 
