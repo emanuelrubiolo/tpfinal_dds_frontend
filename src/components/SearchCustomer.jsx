@@ -26,9 +26,9 @@ const DarkBackgroundContainer = styled(Box)({
   minHeight: "100vh",
   backgroundColor: "#121212",
   display: "flex",
-  justifyContent: "center",
+  flexDirection: "column", // Cambiamos para alinear en columna
   alignItems: "center",
-  padding: "20px",
+  paddingTop: "20px", // Cambiamos el padding a paddingTop para solo dar espacio arriba
 });
 
 const DarkCard = styled(Card)({
@@ -182,62 +182,65 @@ const SearchCustomer = () => {
             </Box>
 
             <List>
-  {customers.map((customer) => (
-    <Card
-      key={customer.id}
-      sx={{
-        backgroundColor: "#42464d", 
-        marginBottom: "8px", 
-        borderRadius: "12px", 
-        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)", 
-      }}
-    >
-      <CardContent>
-        <ListItem
-          disablePadding
-          secondaryAction={
-            <Box>
-              <IconButton
-                edge="end"
-                color="primary"
-                onClick={(event) => handleEditCustomer(event, customer)}
-                sx={{ mr: 1 }}
-              >
-                <EditIcon />
-              </IconButton>
-              <IconButton
-                edge="end"
-                color="error"
-                onClick={(event) => handleDeleteCustomer(event, customer.id)}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          }
-          sx={{
-            cursor: "pointer",
-            "&:hover": {
-              backgroundColor: "rgba(255, 64, 129, 0.1)",
-            },
-          }}
-          onClick={() => handleSelectCustomer(customer)}
-        >
-          <ListItemText
-  primary={`${customer.name} ${customer.lastName}`}
-  secondary={`${
-    customer.phone ? `${customer.phone} - ` : ""
-  }${customer.location.city}`}
-  sx={{
-    color: "#e0e0e3",
-    "& .MuiListItemText-secondary": { color: "#e0e0e3" }, 
-  }}
-/>
-
-        </ListItem>
-      </CardContent>
-    </Card>
-  ))}
-</List>
+              {customers.map((customer) => (
+                <Card
+                  key={customer.id}
+                  sx={{
+                    backgroundColor: "#42464d",
+                    marginBottom: "8px",
+                    borderRadius: "12px",
+                    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)",
+                  }}
+                >
+                  <CardContent>
+                    <ListItem
+                      disablePadding
+                      secondaryAction={
+                        <Box>
+                          <IconButton
+                            edge="end"
+                            color="primary"
+                            onClick={(event) =>
+                              handleEditCustomer(event, customer)
+                            }
+                            sx={{ mr: 1 }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            edge="end"
+                            color="error"
+                            onClick={(event) =>
+                              handleDeleteCustomer(event, customer.id)
+                            }
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      }
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          backgroundColor: "rgba(255, 64, 129, 0.1)",
+                        },
+                      }}
+                      onClick={() => handleSelectCustomer(customer)}
+                    >
+                      <ListItemText
+                        primary={`${customer.name} ${customer.lastName}`}
+                        secondary={`${
+                          customer.phone ? `${customer.phone} - ` : ""
+                        }${customer.location.city}`}
+                        sx={{
+                          color: "#e0e0e3",
+                          "& .MuiListItemText-secondary": { color: "#e0e0e3" },
+                        }}
+                      />
+                    </ListItem>
+                  </CardContent>
+                </Card>
+              ))}
+            </List>
           </CardContent>
         </DarkCard>
       </Container>
