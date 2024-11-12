@@ -131,39 +131,42 @@ const NewSale = () => {
       setError("La cantidad debe ser mayor a cero");
       return;
     }
-
+  
     const productDetails = products.find(
       (product) => product.id === parseInt(selectedProduct)
     );
-
+  
     if (productDetails) {
-      const existingProductIndex = productList.findIndex(
-        (product) => product.id === parseInt(selectedProduct)
-      );
-
-      if (existingProductIndex !== -1) {
-        const updatedList = [...productList];
-        updatedList[existingProductIndex].quantity += parseInt(quantity);
-        setProductList(updatedList);
-      } else if (editingIndex !== null) {
+      if (editingIndex !== null) {
         const updatedList = [...productList];
         updatedList[editingIndex] = {
-          ...updatedList[editingIndex],
+          ...productDetails,
           quantity: parseInt(quantity),
         };
         setProductList(updatedList);
+        setEditingIndex(null); 
       } else {
-        setProductList([
-          ...productList,
-          { ...productDetails, quantity: parseInt(quantity) },
-        ]);
+        const existingProductIndex = productList.findIndex(
+          (product) => product.id === parseInt(selectedProduct)
+        );
+  
+        if (existingProductIndex !== -1) {
+          const updatedList = [...productList];
+          updatedList[existingProductIndex].quantity += parseInt(quantity);
+          setProductList(updatedList);
+        } else {
+          setProductList([
+            ...productList,
+            { ...productDetails, quantity: parseInt(quantity) },
+          ]);
+        }
       }
-
+  
       setSelectedProduct("");
       setQuantity(1);
-      setEditingIndex(null);
     }
   };
+  
 
   const deleteProduct = (index) => {
     const updatedList = [...productList];
