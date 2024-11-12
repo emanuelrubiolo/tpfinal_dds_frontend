@@ -64,34 +64,38 @@ const SearchCustomer = () => {
   const { selectCustomer } = useContext(CustomerContext);
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [cityTerm, setCityTerm] = useState("");
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = (query = "") => {
     axios
-      .get(`${API_BASE_URL}/customers`)
+      .get(`${API_BASE_URL}/customers${query}`)
       .then((response) => {
         setCustomers(response.data);
-        setFilteredCustomers(response.data);
       })
       .catch((error) => {
         console.error("Error al obtener los clientes:", error);
         setError("Error al obtener los clientes");
       });
-  }, []);
+  };
 
   const handleSearch = () => {
-    const results = customers.filter(
-      (customer) =>
-        customer.name.toLowerCase().startsWith(searchTerm.toLowerCase()) ||
-        (customer.lastName &&
-          customer.lastName
-            .toLowerCase()
-            .startsWith(searchTerm.toLowerCase())) ||
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredCustomers(results);
+    const queryParts = [];
+    if (searchTerm)
+      queryParts.push(
+        `name=${encodeURIComponent(searchTerm)}&lastName=${encodeURIComponent(
+          searchTerm
+        )}`
+      );
+    if (cityTerm) queryParts.push(`city=${encodeURIComponent(cityTerm)}`);
+
+    const query = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    fetchCustomers(query);
   };
 
   const handleSelectCustomer = (customer) => {
@@ -103,9 +107,6 @@ const SearchCustomer = () => {
     event.stopPropagation();
     try {
       await axios.delete(`${API_BASE_URL}/customers/${customerId}`);
-      setFilteredCustomers(
-        filteredCustomers.filter((customer) => customer.id !== customerId)
-      );
       setCustomers(customers.filter((customer) => customer.id !== customerId));
       alert("Cliente eliminado con éxito");
     } catch (error) {
@@ -143,7 +144,7 @@ const SearchCustomer = () => {
           <CardContent>
             <Box display="flex" alignItems="center" mb={3}>
               <CustomTextField
-                label="Buscar cliente"
+                label="Buscar por nombre o apellido"
                 variant="outlined"
                 fullWidth
                 value={searchTerm}
@@ -160,48 +161,83 @@ const SearchCustomer = () => {
                 }}
               />
             </Box>
+            <Box display="flex" alignItems="center" mb={3}>
+              <CustomTextField
+                label="Buscar por ciudad"
+                variant="outlined"
+                fullWidth
+                value={cityTerm}
+                onChange={(e) => setCityTerm(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={handleSearch} color="primary">
+                        <SearchIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
 
             <List>
-              {filteredCustomers.map((customer) => (
-                <ListItem
-                  key={customer.id}
-                  secondaryAction={
-                    <Box>
-                      <IconButton
-                        edge="end"
-                        color="primary"
-                        onClick={(event) => handleEditCustomer(event, customer)}
-                        sx={{ mr: 1 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        color="error"
-                        onClick={(event) =>
-                          handleDeleteCustomer(event, customer.id)
-                        }
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  }
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "rgba(255, 64, 129, 0.1)",
-                    },
-                  }}
-                  onClick={() => handleSelectCustomer(customer)}
-                >
-                  <ListItemText
-                    primary={`${customer.name} ${customer.lastName}`}
-                    secondary={customer.phone}
-                    sx={{ color: "#e0e0e3" }}
-                  />
-                </ListItem>
-              ))}
-            </List>
+  {customers.map((customer) => (
+    <Card
+      key={customer.id}
+      sx={{
+        backgroundColor: "#42464d", 
+        marginBottom: "8px", 
+        borderRadius: "12px", 
+        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)", 
+      }}
+    >
+      <CardContent>
+        <ListItem
+          disablePadding
+          secondaryAction={
+            <Box>
+              <IconButton
+                edge="end"
+                color="primary"
+                onClick={(event) => handleEditCustomer(event, customer)}
+                sx={{ mr: 1 }}
+              >
+                <EditIcon />
+              </IconButton>
+              <IconButton
+                edge="end"
+                color="error"
+                onClick={(event) => handleDeleteCustomer(event, customer.id)}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
+          }
+          sx={{
+            cursor: "pointer",
+            "&:hover": {
+              backgroundColor: "rgba(255, 64, 129, 0.1)",
+            },
+          }}
+          onClick={() => handleSelectCustomer(customer)}
+        >
+          <ListItemText
+  primary={`${customer.name} ${customer.lastName}`}
+  secondary={`${
+    customer.phone ? `${customer.phone} - ` : ""
+  }${customer.location.city}`}
+  sx={{
+    color: "#e0e0e3",
+    "& .MuiListItemText-secondary": { color: "#e0e0e3" }, 
+  }}
+/>
+
+        </ListItem>
+      </CardContent>
+    </Card>
+  ))}
+</List>
           </CardContent>
         </DarkCard>
       </Container>
