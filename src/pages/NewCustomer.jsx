@@ -200,7 +200,12 @@ const NewCustomer = () => {
       .then((response) => {
         id ? updateCustomer(customerData) : addCustomer(response.data);
         alert(`Cliente ${id ? "actualizado" : "creado"} exitosamente`);
-        navigate("/");
+        id ? navigate("/") : navigate("/customers/new");
+        id ? navigate("/") : setName("");
+        id ? navigate("/") : setLastName("");
+        id ? navigate("/") : setPhone("");
+        id ? navigate("/") : setComment("");
+        id ? navigate("/") : setLocationId("");
       })
       .catch((error) => {
         console.error(

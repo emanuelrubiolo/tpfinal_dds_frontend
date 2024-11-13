@@ -141,12 +141,17 @@ const NewLocation = () => {
         .then((response) => {
           addLocation(response.data);
           alert("Localidad creada exitosamente");
-          navigate("/");
+          navigate('/new-location');
+        setCity("");
+        setProvince("");
         })
         .catch((error) => {
           console.error("Error al crear la localidad:", error);
           setError("Error al crear la localidad");
         });
+
+        
+        
     }
   };
 

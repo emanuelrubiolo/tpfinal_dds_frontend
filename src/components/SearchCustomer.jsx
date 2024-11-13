@@ -26,9 +26,9 @@ const DarkBackgroundContainer = styled(Box)({
   minHeight: "100vh",
   backgroundColor: "#121212",
   display: "flex",
-  flexDirection: "column", // Cambiamos para alinear en columna
+  flexDirection: "column", 
   alignItems: "center",
-  paddingTop: "20px", // Cambiamos el padding a paddingTop para solo dar espacio arriba
+  paddingTop: "20px", 
 });
 
 const DarkCard = styled(Card)({

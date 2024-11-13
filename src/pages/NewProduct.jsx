@@ -136,7 +136,14 @@ const NewProduct = () => {
       .then((response) => {
         if (!isEditing) addProduct(response.data);
         alert(`Producto ${isEditing ? "actualizado" : "creado"} exitosamente`);
-        navigate("/");
+        if(isEditing){
+          navigate("/")
+        } else {
+          navigate("/new-product")
+          setName("");
+          setCategory("");
+          setDescription("");
+        };
       })
       .catch((error) => {
         console.error(
